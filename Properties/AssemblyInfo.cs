@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("betterGitGUI")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("Better Git GUI")]
+[assembly: AssemblyDescription("更好的Git GUI")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("微软中国")]
-[assembly: AssemblyProduct("betterGitGUI")]
-[assembly: AssemblyCopyright("Copyright © 微软中国 2026")]
+[assembly: AssemblyCompany("Cream-CN")]
+[assembly: AssemblyProduct("Better Git GUI")]
+[assembly: AssemblyCopyright("Copyright © Cream-CN 2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -29,5 +29,5 @@ using System.Runtime.InteropServices;
 //      生成号
 //      修订号
 //
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("0.1.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
