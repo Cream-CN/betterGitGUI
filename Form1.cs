@@ -502,21 +502,20 @@ namespace betterGitGUI
                     var psi = new ProcessStartInfo
                     {
                         FileName = GitRunner.GitExe,
-                        Arguments = "-c core.quotepath=false -c i18n.logoutputencoding=utf-8 " + args,
+                        Arguments = "-c core.quotepath=false -c i18n.logoutputencoding=utf-8 -c i18n.commitencoding=utf-8 " + args,
                         UseShellExecute = false,
                         CreateNoWindow = true,
                         RedirectStandardInput = true,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
-                        StandardOutputEncoding = Encoding.UTF8,
-                        StandardErrorEncoding = Encoding.UTF8,
+                        StandardOutputEncoding = new UTF8Encoding(false),
+                        StandardErrorEncoding = new UTF8Encoding(false),
                     };
                     psi.WorkingDirectory = GitRunner.WorkingDir;
                     var p = Process.Start(psi);
-                    var sb = new StringBuilder();
-                    sb.AppendLine(message);
-                    // 追加作者信息（如果有未设置的话）
-                    p.StandardInput.Write(sb.ToString());
+                    var msgBytes = new UTF8Encoding(false).GetBytes(message + "\n");
+                    p.StandardInput.BaseStream.Write(msgBytes, 0, msgBytes.Length);
+                    p.StandardInput.BaseStream.Flush();
                     p.StandardInput.Close();
                     var soTask = p.StandardOutput.ReadToEndAsync();
                     var seTask = p.StandardError.ReadToEndAsync();

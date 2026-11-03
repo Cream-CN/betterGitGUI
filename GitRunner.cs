@@ -81,8 +81,8 @@ namespace betterGitGUI
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                StandardOutputEncoding = Encoding.UTF8,
-                StandardErrorEncoding = Encoding.UTF8,
+                StandardOutputEncoding = new UTF8Encoding(false),
+                StandardErrorEncoding = new UTF8Encoding(false),
             };
             if (!string.IsNullOrEmpty(WorkingDir) && Directory.Exists(WorkingDir))
                 psi.WorkingDirectory = WorkingDir;
