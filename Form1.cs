@@ -21,6 +21,19 @@ namespace betterGitGUI
             InitializeComponent();
             GitRunner.ProbeGit();
             this.Load += Form1_Load;
+            LoadEmbeddedIcon();
+        }
+
+        private void LoadEmbeddedIcon()
+        {
+            var asm = System.Reflection.Assembly.GetExecutingAssembly();
+            using (var stream = asm.GetManifestResourceStream("betterGitGUI.icon.ico"))
+            {
+                if (stream != null)
+                {
+                    this.Icon = new System.Drawing.Icon(stream);
+                }
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
