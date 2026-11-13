@@ -53,7 +53,7 @@ namespace betterGitGUI
             MaximizeBox = false;
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(820, 600);
+            ClientSize = new Size(900, 600);
             Font = new Font("Microsoft YaHei UI", 9F);
 
             // ---- 拆分方式 ----
@@ -236,7 +236,7 @@ namespace betterGitGUI
             grid = new DataGridView
             {
                 Location = new Point(356, 34),
-                Size = new Size(452, 554),
+                Size = new Size(532, 554),
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AllowUserToResizeRows = false,
@@ -250,10 +250,10 @@ namespace betterGitGUI
             };
             grid.Columns.Add(MakeColumn("序号", 34, true));
             grid.Columns.Add(MakeColumn("文件", 108, true));
-            grid.Columns.Add(MakeColumn("行数", 38, true));
+            grid.Columns.Add(MakeColumn("行数", 52, true));
             grid.Columns.Add(MakeColumn("提交时间", 118, true));
             // 剩下的宽度给提交信息，方便直接改
-            grid.Columns.Add(MakeColumn("提交信息", 154, false));
+            grid.Columns.Add(MakeColumn("提交信息", 220, false));
 
             Controls.AddRange(new Control[]
             {
@@ -351,10 +351,12 @@ namespace betterGitGUI
                     files = string.Join("，", slice.Paths.ToArray());
                     if (files.Length > 46) files = files.Substring(0, 45) + "…";
                 }
+                // 二进制没有「行」的概念，这里不给行数、也不给差异
+                var linesText = slice.Binary ? "二进制" : slice.Lines.ToString();
                 grid.Rows.Add(
                     (slice.Index + 1).ToString(),
                     files,
-                    slice.Lines.ToString(),
+                    linesText,
                     slice.When.ToString("yyyy-MM-dd HH:mm"),
                     slice.Message);
             }

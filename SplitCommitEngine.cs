@@ -40,6 +40,7 @@ namespace betterGitGUI
         public int Quota;      // 本提交最多消费的改动行数
         public int Lines;      // 预估（实际）消费的改动行数
         public bool WholeFile; // 按文件模式：整取一个文件
+        public bool Binary;    // 含有二进制文件（界面不展示行数，改显示「二进制」）
         public DateTime When;
         public string Message = "";
         public List<string> Paths = new List<string>();
@@ -107,6 +108,12 @@ namespace betterGitGUI
             foreach (var f in files) totalLines += f.ChangedLines();
             plan.TotalLines = totalLines;
 
+            var binaryPaths = new HashSet<string>();
+            foreach (var f in files)
+            {
+                if (f.ShowsAsBinary && !string.IsNullOrEmpty(f.Path)) binaryPaths.Add(f.Path);
+            }
+
             if (opt.Granularity == SplitGranularity.ByFile)
             {
                 for (int i = 0; i < files.Count; i++)
@@ -116,6 +123,7 @@ namespace betterGitGUI
                         Index = i,
                         WholeFile = true,
                         Lines = files[i].ChangedLines(),
+                        Binary = files[i].ShowsAsBinary,
                     };
                     slice.Paths.Add(files[i].Path);
                     plan.Slices.Add(slice);
@@ -132,18 +140,28 @@ namespace betterGitGUI
                 for (int i = 0; i < count; i++)
                 {
                     int remainingCommits = count - i;
-                    int quota = remaining > 0
-                        ? (int)Math.Ceiling((double)remaining / remainingCommits)
-                        : 0;
+                    int quota;
+                    if (totalLines > 0) quota = remaining > 0 ? (int)Math.Ceiling((double)remaining / remainingCommits) : 0;
+                    // 只有模式变更（0 行改动）时也要发出补丁，否则 mode 行永远进不了暂存区
+                    else quota = 1;
 
                     var slice = new SplitSlice { Index = i, Quota = quota };
                     if (quota > 0)
                     {
                         slice.Lines = cursor.Consume(quota, slice.Paths);
                         remaining -= slice.Lines;
-                        if (slice.Lines <= 0) remaining = 0; // 防御：不该发生
+                        if (slice.Lines <= 0 && totalLines > 0) remaining = 0; // 防御：不该发生
                     }
                     plan.Slices.Add(slice);
+                }
+            }
+
+            foreach (var slice in plan.Slices)
+            {
+                if (slice.Binary) continue;
+                foreach (var p in slice.Paths)
+                {
+                    if (binaryPaths.Contains(p)) { slice.Binary = true; break; }
                 }
             }
 
@@ -440,13 +458,23 @@ namespace betterGitGUI
         {
             public List<string> Header = new List<string>();
             public List<DiffHunk> Hunks = new List<DiffHunk>();
+            /// <summary>git 的判定：补丁体是 GIT binary patch / Binary files ... differ。</summary>
             public bool IsBinary;
+            /// <summary>我们按 git 的算法（前 8000 字节出现 0x00）读工作区文件得到的判定。</summary>
+            public bool IsBinaryBlob;
             public bool IsDeleted;
             public List<string> BinaryBlock = new List<string>();
             public string Path = "";
 
-            /// <summary>整文件删除必须是原子单元：补丁头是 deleted file mode，只删几行会自相矛盾。</summary>
-            public bool Atomic { get { return IsBinary || IsDeleted; } }
+            /// <summary>给界面看的二进制判定：两种来源任一成立。</summary>
+            public bool ShowsAsBinary { get { return IsBinary || IsBinaryBlob; } }
+
+            /// <summary>
+            /// 整块处理的单元：二进制内容（含 git 当作文本、但算法判定是二进制的）和整文件删除。
+            /// 二进制没有「行」的概念，不按行拆分；删除的补丁头是 deleted file mode，只删几行会自相矛盾。
+            /// 文件模式（chmod）变更不在此列，交给 git 默认行为：mode 行随文件补丁一起提交。
+            /// </summary>
+            public bool Atomic { get { return IsBinary || IsBinaryBlob || IsDeleted; } }
 
             public int ChangedLines()
             {
@@ -534,8 +562,36 @@ namespace betterGitGUI
                 {
                     if (line.StartsWith("deleted file mode", StringComparison.Ordinal)) f.IsDeleted = true;
                 }
+                MarkBinaryBlob(f);
             }
             return files;
+        }
+
+        /// <summary>
+        /// git 的二进制判别算法：看文件头 8000 字节里有没有 0x00。
+        /// git 用大白话讲就是「能在前 8000 字节里找到 NUL 就算二进制」（见 buffer_is_binary）。
+        /// 这里自己读工作区文件再判一遍，覆盖 git 被 .gitattributes（比如 *.bin text）误导成文本的情况。
+        /// </summary>
+        private static void MarkBinaryBlob(DiffFile f)
+        {
+            if (f.IsBinary || string.IsNullOrEmpty(f.Path)) return;
+            var abs = ToWorkingPath(f.Path);
+            if (abs == null) return;
+            // 删除、改名源文件等取不到内容的情形，直接信 git 的判定
+            f.IsBinaryBlob = BinaryDetector.IsBinaryFile(abs);
+        }
+
+        private static string ToWorkingPath(string repoRelativePath)
+        {
+            if (string.IsNullOrEmpty(GitRunner.WorkingDir)) return null;
+            try
+            {
+                return Path.Combine(GitRunner.WorkingDir, repoRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            }
+            catch (ArgumentException)
+            {
+                return null; // 路径里有非法字符，交给 git
+            }
         }
 
         private static DiffHunk ParseHunkHeader(string line)
@@ -551,14 +607,22 @@ namespace betterGitGUI
 
         private static string ExtractPath(List<string> header)
         {
-            string minus = null, plus = null;
+            string minus = null, plus = null, fromGitLine = null;
             foreach (var line in header)
             {
                 if (line.StartsWith("--- ", StringComparison.Ordinal)) minus = line.Substring(4).Trim();
                 else if (line.StartsWith("+++ ", StringComparison.Ordinal)) plus = line.Substring(4).Trim();
+                else if (line.StartsWith("diff --git ", StringComparison.Ordinal))
+                {
+                    // 二进制、删除等没有 ---/+++ 行，只能从 "diff --git a/x b/x" 里取
+                    var rest = line.Substring("diff --git ".Length);
+                    int mid = rest.IndexOf(" b/", StringComparison.Ordinal);
+                    if (mid > 0) fromGitLine = UnquotePath(rest.Substring(mid + 3));
+                }
             }
             var p = plus;
             if (string.IsNullOrEmpty(p) || p == "/dev/null") p = minus;
+            if (string.IsNullOrEmpty(p) || p == "/dev/null") p = fromGitLine;
             if (string.IsNullOrEmpty(p) || p == "/dev/null") return "";
             if (p.StartsWith("a/", StringComparison.Ordinal) || p.StartsWith("b/", StringComparison.Ordinal))
                 p = p.Substring(2);
@@ -582,8 +646,9 @@ namespace betterGitGUI
             var sb = new StringBuilder();
             foreach (var line in f.Header)
             {
-                // 去掉 index 行里的 blob 哈希：部分应用时 git 会校验哈希，导致 "corrupt patch"
-                if (line.StartsWith("index ", StringComparison.Ordinal)) continue;
+                // 文本补丁按前缀拆分时，index 行会让 git 校验 postimage blob 而报 "corrupt patch"，必须去掉；
+                // 但二进制补丁必须保留 index 行，否则 git apply 直接报 "No valid patches in input"。
+                if (!f.IsBinary && line.StartsWith("index ", StringComparison.Ordinal)) continue;
                 sb.Append(line).Append('\n');
             }
             return sb.ToString();
@@ -793,6 +858,38 @@ namespace betterGitGUI
                     }
                 }
                 return i;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 二进制判别，算法照 git（buffer_is_binary）：只看文件前 8000 字节，出现 0x00 就算二进制。
+    /// 纯文本、UTF-8 中文、UTF-16 之外的常见文本都不会有 NUL；图片/压缩包/可执行文件基本必然命中。
+    /// </summary>
+    internal static class BinaryDetector
+    {
+        private const int SampleBytes = 8000;
+
+        public static bool IsBinaryFile(string absolutePath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(absolutePath) || !File.Exists(absolutePath)) return false;
+                using (var fs = new FileStream(absolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    var buffer = new byte[SampleBytes];
+                    int read = fs.Read(buffer, 0, buffer.Length);
+                    for (int i = 0; i < read; i++)
+                    {
+                        if (buffer[i] == 0) return true;
+                    }
+                }
+                return false;
+            }
+            catch (Exception)
+            {
+                // 读不到内容（被占用、没权限）就交给 git 自己的判定
+                return false;
             }
         }
     }
