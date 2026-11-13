@@ -73,6 +73,14 @@ namespace betterGitGUI
         /// </summary>
         public static GitResult Run(string args)
         {
+            return Run(args, null);
+        }
+
+        /// <summary>
+        /// 执行一条 git 命令，并可额外注入环境变量（例如 GIT_AUTHOR_DATE）。
+        /// </summary>
+        public static GitResult Run(string args, IDictionary<string, string> environment)
+        {
             var psi = new ProcessStartInfo
             {
                 FileName = GitExe,
@@ -84,6 +92,11 @@ namespace betterGitGUI
                 StandardOutputEncoding = new UTF8Encoding(false),
                 StandardErrorEncoding = new UTF8Encoding(false),
             };
+            if (environment != null)
+            {
+                foreach (var kv in environment)
+                    psi.EnvironmentVariables[kv.Key] = kv.Value;
+            }
             if (!string.IsNullOrEmpty(WorkingDir) && Directory.Exists(WorkingDir))
                 psi.WorkingDirectory = WorkingDir;
 
@@ -113,6 +126,43 @@ namespace betterGitGUI
         public static GitResult RunUi(string args)
         {
             return Run("-c core.quotepath=false -c i18n.logoutputencoding=utf-8 " + args);
+        }
+
+        /// <summary>
+        /// 执行提交命令。提交信息先写成 UTF-8（无 BOM）的临时文件，再用 -F 交给 git。
+        /// 不能走 stdin：.NET Framework 的 StandardInput 背后是带 UTF-8 BOM 的 StreamWriter，
+        /// 关闭它时会把 BOM（EF BB BF）刷进管道，提交信息开头就会多出一个 BOM，
+        /// 被按 ANSI/GBK 解读时表现为乱码。args 形如 "commit" 或 "commit --amend"。
+        /// </summary>
+        public static GitResult RunCommit(string args, string message)
+        {
+            return RunCommit(args, message, null);
+        }
+
+        /// <summary>
+        /// 同上，可额外注入环境变量（例如 GIT_AUTHOR_DATE / GIT_COMMITTER_DATE）。
+        /// </summary>
+        public static GitResult RunCommit(string args, string message, IDictionary<string, string> environment)
+        {
+            var msgFile = Path.Combine(Path.GetTempPath(),
+                "betterGitGUI-commit-" + Guid.NewGuid().ToString("N") + ".txt");
+            try
+            {
+                // 统一成 LF 换行，写纯 UTF-8 字节，不带 BOM
+                File.WriteAllText(msgFile,
+                    (message ?? "").Replace("\r\n", "\n") + "\n",
+                    new UTF8Encoding(false));
+
+                return Run("-c core.quotepath=false -c i18n.logOutputEncoding=utf-8 "
+                         + "-c i18n.commitEncoding=utf-8 "
+                         + args + " -F " + Quote(msgFile), environment);
+            }
+            finally
+            {
+                // 临时文件只用于本次提交，无论如何都清理掉
+                try { if (File.Exists(msgFile)) File.Delete(msgFile); }
+                catch { /* 清理失败不影响提交结果 */ }
+            }
         }
 
         /// <summary>

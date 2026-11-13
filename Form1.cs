@@ -291,8 +291,8 @@ namespace betterGitGUI
                 MessageBox.Show(this, "请填写提交信息。");
                 return;
             }
-            // 用 -F - 从 stdin 读取，避免引号/转义问题
-            RunGitBusyCommit("commit -F -", msg);
+            // 提交信息写临时文件交给 git 读取，避免引号/转义以及 stdin 的 BOM 问题
+            RunGitBusyCommit("commit", msg);
         }
 
         private void AmendToolStripMenuItem_Click(object sender, EventArgs e)
@@ -305,7 +305,7 @@ namespace betterGitGUI
             }
             else
             {
-                RunGitBusyCommit("commit --amend -F -", msg);
+                RunGitBusyCommit("commit --amend", msg);
             }
         }
 
@@ -399,6 +399,32 @@ namespace betterGitGUI
             return list;
         }
 
+        // ---------- 刷绿：拆分提交 ----------
+
+        /// <summary>
+        /// 把本地未提交的改动按用户选择的方式拆成多个提交。
+        /// </summary>
+        private void SplitCommitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(GitRunner.WorkingDir) || !GitRunner.IsGitRepository(GitRunner.WorkingDir))
+            {
+                MessageBox.Show(this, "请先打开或初始化仓库。");
+                return;
+            }
+            if (_busy) return;
+
+            int made = 0;
+            using (var dlg = new SplitCommitForm(textBoxCommit.Text))
+            {
+                dlg.ShowDialog(this);
+                if (dlg.Executed) made = dlg.CommitMadeCount;
+            }
+
+            RefreshAll();
+            if (made > 0)
+                Log("刷绿完成：新建了 " + made + " 个提交。");
+        }
+
         // ---------- 其他一键功能 ----------
 
         private void DiscardToolStripMenuItem_Click(object sender, EventArgs e)
@@ -489,7 +515,8 @@ namespace betterGitGUI
         }
 
         /// <summary>
-        /// 执行需要从 stdin 读取提交信息的命令（commit -F -）。
+        /// 执行需要提交信息的命令（commit / commit --amend）。
+        /// 提交信息由 GitRunner.RunCommit 以 UTF-8 临时文件形式传入，不再经过 stdin。
         /// </summary>
         private async void RunGitBusyCommit(string args, string message)
         {
@@ -497,37 +524,7 @@ namespace betterGitGUI
             SetBusy(true);
             try
             {
-                var result = await Task.Run(() =>
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = GitRunner.GitExe,
-                        Arguments = "-c core.quotepath=false -c i18n.logoutputencoding=utf-8 -c i18n.commitencoding=utf-8 " + args,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        StandardOutputEncoding = new UTF8Encoding(false),
-                        StandardErrorEncoding = new UTF8Encoding(false),
-                    };
-                    psi.WorkingDirectory = GitRunner.WorkingDir;
-                    var p = Process.Start(psi);
-                    var msgBytes = new UTF8Encoding(false).GetBytes(message + "\n");
-                    p.StandardInput.BaseStream.Write(msgBytes, 0, msgBytes.Length);
-                    p.StandardInput.BaseStream.Flush();
-                    p.StandardInput.Close();
-                    var soTask = p.StandardOutput.ReadToEndAsync();
-                    var seTask = p.StandardError.ReadToEndAsync();
-                    p.WaitForExit();
-                    return new GitResult
-                    {
-                        ExitCode = p.ExitCode,
-                        StdOut = soTask.Result,
-                        StdErr = seTask.Result,
-                        Command = "git " + args + " (-F -)",
-                    };
-                });
+                var result = await Task.Run(() => GitRunner.RunCommit(args, message));
                 Log(result);
                 RefreshAll();
                 if (result.Success)

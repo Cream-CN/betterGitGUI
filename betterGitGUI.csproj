@@ -53,6 +53,10 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GitRunner.cs" />
+    <Compile Include="SplitCommitEngine.cs" />
+    <Compile Include="SplitCommitForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>

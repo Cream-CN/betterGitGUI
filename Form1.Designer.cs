@@ -29,6 +29,8 @@
         private System.Windows.Forms.ToolStripMenuItem fetchMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pullMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pushMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem greenMenu;
+        private System.Windows.Forms.ToolStripMenuItem splitCommitMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpMenu;
         private System.Windows.Forms.ToolStripMenuItem aboutMenuItem;
 
@@ -92,6 +94,8 @@
             this.fetchMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pullMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pushMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.greenMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.splitCommitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 
@@ -154,6 +158,7 @@
                 this.repoMenu,
                 this.branchMenu,
                 this.remoteMenu,
+                this.greenMenu,
                 this.helpMenu});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
@@ -197,6 +202,12 @@
             this.pullMenuItem.Click += new System.EventHandler(this.PullToolStripMenuItem_Click);
             this.pushMenuItem.Text = "推送 Push";
             this.pushMenuItem.Click += new System.EventHandler(this.PushToolStripMenuItem_Click);
+
+            this.greenMenu.Text = "刷绿(&G)";
+            this.greenMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.splitCommitMenuItem});
+            this.splitCommitMenuItem.Text = "拆分提交（刷绿）...";
+            this.splitCommitMenuItem.Click += new System.EventHandler(this.SplitCommitToolStripMenuItem_Click);
 
             this.helpMenu.Text = "帮助(&H)";
             this.helpMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
