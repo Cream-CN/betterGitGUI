@@ -46,6 +46,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -56,6 +57,22 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="GitRunner.cs" />
+    <Compile Include="GitDiff.cs" />
+    <Compile Include="GhRunner.cs" />
+    <Compile Include="RemoteUrl.cs" />
+    <Compile Include="RemotesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GitHubForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="RepoStore.cs" />
+    <Compile Include="StashForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="HistoryForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="SplitCommitEngine.cs" />
     <Compile Include="SplitCommitForm.cs">
       <SubType>Form</SubType>

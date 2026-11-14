@@ -58,13 +58,39 @@ namespace betterGitGUI
             {
                 @"D:\Git\cmd\git.exe",
                 @"C:\Program Files\Git\cmd\git.exe",
+                @"C:\Program Files\Git\bin\git.exe",
                 @"C:\Program Files (x86)\Git\cmd\git.exe",
                 @"D:\Program Files\Git\cmd\git.exe",
+                @"D:\Program Files\Git\bin\git.exe",
+                @"D:\Program Files (x86)\Git\cmd\git.exe",
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Programs\Git\cmd\git.exe",
             };
             foreach (var c in candidates)
             {
                 if (File.Exists(c)) { GitExe = c; return; }
+            }
+
+            // 3) 从注册表读 Git for Windows 的安装路径（装在非默认盘时也能找到）
+            foreach (var key in new[]
+            {
+                @"SOFTWARE\GitForWindows",
+                @"SOFTWARE\WOW6432Node\GitForWindows",
+            })
+            {
+                try
+                {
+                    using (var registryKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(key))
+                    {
+                        if (registryKey == null) continue;
+                        var installPath = registryKey.GetValue("InstallPath") as string;
+                        if (string.IsNullOrEmpty(installPath)) continue;
+                        var exe = Path.Combine(installPath, @"cmd\git.exe");
+                        if (File.Exists(exe)) { GitExe = exe; return; }
+                        exe = Path.Combine(installPath, @"bin\git.exe");
+                        if (File.Exists(exe)) { GitExe = exe; return; }
+                    }
+                }
+                catch { /* 注册表不可读时继续尝试下一种 */ }
             }
         }
 
@@ -102,7 +128,22 @@ namespace betterGitGUI
 
             var sw = Stopwatch.StartNew();
             var p = new Process { StartInfo = psi };
-            p.Start();
+            try
+            {
+                p.Start();
+            }
+            catch (Exception ex)
+            {
+                // git 没装或路径失效时不要抛异常把界面打崩，返回一个失败结果由调用方提示
+                sw.Stop();
+                return new GitResult
+                {
+                    ExitCode = -1,
+                    StdErr = "无法启动 git（" + GitExe + "）：" + ex.Message,
+                    Command = "git " + args,
+                    Elapsed = sw.Elapsed,
+                };
+            }
 
             // 异步读取避免死锁
             var soTask = p.StandardOutput.ReadToEndAsync();
@@ -166,6 +207,36 @@ namespace betterGitGUI
         }
 
         /// <summary>
+        /// 把一段补丁文本写到临时文件后执行 git apply。
+        /// cached=true 表示改暂存区（暂存/取消暂存一块），
+        /// reverse=true 表示反向应用（取消暂存 / 丢弃一块改动）。
+        /// </summary>
+        public static GitResult RunApplyPatch(string patchText, bool cached, bool reverse)
+        {
+            var patchFile = Path.Combine(Path.GetTempPath(),
+                "betterGitGUI-patch-" + Guid.NewGuid().ToString("N") + ".patch");
+            try
+            {
+                // 补丁必须是 LF 结尾的纯 UTF-8（无 BOM），否则 git apply 会解析失败
+                File.WriteAllText(patchFile,
+                    (patchText ?? "").Replace("\r\n", "\n").TrimEnd('\n') + "\n",
+                    new UTF8Encoding(false));
+
+                var args = "-c core.quotepath=false apply --recount --whitespace=nowarn"
+                         + (cached ? " --cached" : "")
+                         + (reverse ? " -R" : "")
+                         + " " + Quote(patchFile);
+
+                return Run(args);
+            }
+            finally
+            {
+                try { if (File.Exists(patchFile)) File.Delete(patchFile); }
+                catch { /* 清理失败不影响结果 */ }
+            }
+        }
+
+        /// <summary>
         /// 把单个路径用双引号包起来，供命令行使用。
         /// </summary>
         public static string Quote(string path)
@@ -198,6 +269,15 @@ namespace betterGitGUI
     }
 
     /// <summary>
+    /// 条目属于左边（未暂存）还是右边（已暂存）列表。
+    /// </summary>
+    public enum EntryList
+    {
+        Unstaged,
+        Staged,
+    }
+
+    /// <summary>
     /// git status --porcelain 的一行记录。
     /// </summary>
     public class GitStatusEntry
@@ -206,9 +286,23 @@ namespace betterGitGUI
         public string WorkTreeStatus; // 第二列
         public string Path;
         public string OldPath; // 重命名时的原路径
+        public EntryList List = EntryList.Unstaged;
 
         public bool IsStaged { get { return StagedStatus != " " && StagedStatus != "?"; } }
         public bool IsUntracked { get { return StagedStatus == "?" && WorkTreeStatus == "?"; } }
+
+        /// <summary>
+        /// 是否是冲突（未合并）文件：UU / AA / DD / AU / UA / DU / UD。
+        /// </summary>
+        public bool IsUnmerged
+        {
+            get
+            {
+                var code = StagedStatus + WorkTreeStatus;
+                return code == "UU" || code == "AA" || code == "DD"
+                    || code == "AU" || code == "UA" || code == "DU" || code == "UD";
+            }
+        }
 
         public string DisplayPath
         {
@@ -217,6 +311,21 @@ namespace betterGitGUI
                 if (!string.IsNullOrEmpty(OldPath)) return OldPath + " -> " + Path;
                 return Path;
             }
+        }
+
+        /// <summary>
+        /// 一个文件同时出现在左右两栏时（部分暂存），需要两条互不影响的记录。
+        /// </summary>
+        public GitStatusEntry Clone()
+        {
+            return new GitStatusEntry
+            {
+                StagedStatus = StagedStatus,
+                WorkTreeStatus = WorkTreeStatus,
+                Path = Path,
+                OldPath = OldPath,
+                List = List,
+            };
         }
     }
 }

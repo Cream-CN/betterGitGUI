@@ -29,10 +29,21 @@
         private System.Windows.Forms.ToolStripMenuItem fetchMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pullMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pushMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem syncMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem remoteUrlMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem githubMenu;
+        private System.Windows.Forms.ToolStripMenuItem githubPanelMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem githubOpenRepoMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem mergeAbortMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem rebaseAbortMenuItem;
         private System.Windows.Forms.ToolStripMenuItem greenMenu;
         private System.Windows.Forms.ToolStripMenuItem splitCommitMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem stashMenu;
+        private System.Windows.Forms.ToolStripMenuItem stashSaveMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem stashListMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpMenu;
         private System.Windows.Forms.ToolStripMenuItem aboutMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem recentMenu;
 
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton openToolBtn;
@@ -47,14 +58,28 @@
         private System.Windows.Forms.ToolStripButton fetchToolBtn;
         private System.Windows.Forms.ToolStripButton pullToolBtn;
         private System.Windows.Forms.ToolStripButton pushToolBtn;
+        private System.Windows.Forms.ToolStripButton githubToolBtn;
         private System.Windows.Forms.ToolStripSeparator toolSep3;
         private System.Windows.Forms.ToolStripButton logToolBtn;
         private System.Windows.Forms.ToolStripButton discardToolBtn;
         private System.Windows.Forms.ToolStripButton resetHardToolBtn;
+        private System.Windows.Forms.ToolStripSeparator toolSep4;
+        private System.Windows.Forms.ToolStripSeparator toolSep5;
+        private System.Windows.Forms.ToolStripButton stashToolBtn;
+        private System.Windows.Forms.ToolStripButton undoCommitToolBtn;
+        private System.Windows.Forms.ToolStripButton lastMsgToolBtn;
+        private System.Windows.Forms.ToolStripButton syncToolBtn;
+        private System.Windows.Forms.ToolStripLabel filterLabel;
+        private System.Windows.Forms.ToolStripTextBox filterToolBox;
 
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel repoStatusLabel;
         private System.Windows.Forms.ToolStripStatusLabel branchStatusLabel;
+        private System.Windows.Forms.ToolStripStatusLabel aheadBehindLabel;
+
+        private System.Windows.Forms.SplitContainer splitDiff;
+        private System.Windows.Forms.Label lblDiffTitle;
+        private System.Windows.Forms.RichTextBox richDiff;
 
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.Label labelUnstaged;
@@ -94,10 +119,21 @@
             this.fetchMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pullMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pushMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.syncMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.remoteUrlMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.githubMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.githubPanelMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.githubOpenRepoMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.mergeAbortMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.rebaseAbortMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.greenMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.splitCommitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stashMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.stashSaveMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stashListMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.recentMenu = new System.Windows.Forms.ToolStripMenuItem();
 
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.openToolBtn = new System.Windows.Forms.ToolStripButton();
@@ -112,14 +148,28 @@
             this.fetchToolBtn = new System.Windows.Forms.ToolStripButton();
             this.pullToolBtn = new System.Windows.Forms.ToolStripButton();
             this.pushToolBtn = new System.Windows.Forms.ToolStripButton();
+            this.githubToolBtn = new System.Windows.Forms.ToolStripButton();
             this.toolSep3 = new System.Windows.Forms.ToolStripSeparator();
             this.logToolBtn = new System.Windows.Forms.ToolStripButton();
             this.discardToolBtn = new System.Windows.Forms.ToolStripButton();
             this.resetHardToolBtn = new System.Windows.Forms.ToolStripButton();
+            this.toolSep4 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolSep5 = new System.Windows.Forms.ToolStripSeparator();
+            this.stashToolBtn = new System.Windows.Forms.ToolStripButton();
+            this.undoCommitToolBtn = new System.Windows.Forms.ToolStripButton();
+            this.lastMsgToolBtn = new System.Windows.Forms.ToolStripButton();
+            this.syncToolBtn = new System.Windows.Forms.ToolStripButton();
+            this.filterLabel = new System.Windows.Forms.ToolStripLabel();
+            this.filterToolBox = new System.Windows.Forms.ToolStripTextBox();
 
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.repoStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.branchStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            this.aheadBehindLabel = new System.Windows.Forms.ToolStripStatusLabel();
+
+            this.splitDiff = new System.Windows.Forms.SplitContainer();
+            this.lblDiffTitle = new System.Windows.Forms.Label();
+            this.richDiff = new System.Windows.Forms.RichTextBox();
 
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.labelUnstaged = new System.Windows.Forms.Label();
@@ -147,6 +197,10 @@
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitDiff)).BeginInit();
+            this.splitDiff.Panel1.SuspendLayout();
+            this.splitDiff.Panel2.SuspendLayout();
+            this.splitDiff.SuspendLayout();
             this.commitPanel.SuspendLayout();
             this.outputPanel.SuspendLayout();
             this.SuspendLayout();
@@ -159,6 +213,8 @@
                 this.branchMenu,
                 this.remoteMenu,
                 this.greenMenu,
+                this.stashMenu,
+                this.githubMenu,
                 this.helpMenu});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
@@ -170,12 +226,14 @@
                 this.openRepoMenuItem,
                 this.initRepoMenuItem,
                 this.menuSep1,
+                this.recentMenu,
                 this.exitMenuItem});
             this.openRepoMenuItem.Text = "打开仓库...";
             this.openRepoMenuItem.Click += new System.EventHandler(this.OpenRepositoryToolStripMenuItem_Click);
             this.initRepoMenuItem.Text = "初始化仓库...";
             this.initRepoMenuItem.Click += new System.EventHandler(this.InitRepositoryToolStripMenuItem_Click);
             this.menuSep1.Text = "-";
+            this.recentMenu.Text = "最近打开";
             this.exitMenuItem.Text = "退出";
             this.exitMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItem_Click);
 
@@ -183,31 +241,61 @@
             this.branchMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.checkoutBranchMenuItem,
                 this.createBranchMenuItem,
-                this.deleteBranchMenuItem});
+                this.deleteBranchMenuItem,
+                this.mergeAbortMenuItem,
+                this.rebaseAbortMenuItem});
             this.checkoutBranchMenuItem.Text = "检出分支...";
             this.checkoutBranchMenuItem.Click += new System.EventHandler(this.CheckoutBranchToolStripMenuItem_Click);
             this.createBranchMenuItem.Text = "新建分支...";
             this.createBranchMenuItem.Click += new System.EventHandler(this.CreateBranchToolStripMenuItem_Click);
             this.deleteBranchMenuItem.Text = "删除分支...";
             this.deleteBranchMenuItem.Click += new System.EventHandler(this.DeleteBranchToolStripMenuItem_Click);
+            this.mergeAbortMenuItem.Text = "中止合并 (git merge --abort)";
+            this.mergeAbortMenuItem.Click += new System.EventHandler(this.MergeAbortToolStripMenuItem_Click);
+            this.rebaseAbortMenuItem.Text = "中止变基 (git rebase --abort)";
+            this.rebaseAbortMenuItem.Click += new System.EventHandler(this.RebaseAbortToolStripMenuItem_Click);
 
             this.remoteMenu.Text = "远程(&O)";
             this.remoteMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.fetchMenuItem,
                 this.pullMenuItem,
-                this.pushMenuItem});
+                this.pushMenuItem,
+                this.syncMenuItem,
+                this.remoteUrlMenuItem});
             this.fetchMenuItem.Text = "获取 Fetch";
             this.fetchMenuItem.Click += new System.EventHandler(this.FetchToolStripMenuItem_Click);
             this.pullMenuItem.Text = "拉取 Pull";
             this.pullMenuItem.Click += new System.EventHandler(this.PullToolStripMenuItem_Click);
             this.pushMenuItem.Text = "推送 Push";
             this.pushMenuItem.Click += new System.EventHandler(this.PushToolStripMenuItem_Click);
+            this.syncMenuItem.Text = "一键同步（fetch + pull --rebase + push）";
+            this.syncMenuItem.Click += new System.EventHandler(this.SyncToolStripMenuItem_Click);
+            this.remoteUrlMenuItem.Text = "修改远程地址（SSH / HTTPS）...";
+            this.remoteUrlMenuItem.Click += new System.EventHandler(this.RemoteUrlToolStripMenuItem_Click);
+
+            this.githubMenu.Text = "GitHub(&U)";
+            this.githubMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.githubPanelMenuItem,
+                this.githubOpenRepoMenuItem});
+            this.githubPanelMenuItem.Text = "GitHub 面板（PR / Issue）...";
+            this.githubPanelMenuItem.Click += new System.EventHandler(this.GitHubPanelToolStripMenuItem_Click);
+            this.githubOpenRepoMenuItem.Text = "在浏览器打开仓库";
+            this.githubOpenRepoMenuItem.Click += new System.EventHandler(this.GitHubOpenRepoMenuItem_Click);
 
             this.greenMenu.Text = "刷绿(&G)";
             this.greenMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.splitCommitMenuItem});
             this.splitCommitMenuItem.Text = "刷绿（贡献图 / 拆分提交）...";
             this.splitCommitMenuItem.Click += new System.EventHandler(this.SplitCommitToolStripMenuItem_Click);
+
+            this.stashMenu.Text = "储藏(&S)";
+            this.stashMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.stashSaveMenuItem,
+                this.stashListMenuItem});
+            this.stashSaveMenuItem.Text = "把当前改动存进储藏...";
+            this.stashSaveMenuItem.Click += new System.EventHandler(this.StashSaveToolStripMenuItem_Click);
+            this.stashListMenuItem.Text = "储藏列表 / 弹出 / 删除...";
+            this.stashListMenuItem.Click += new System.EventHandler(this.StashListToolStripMenuItem_Click);
 
             this.helpMenu.Text = "帮助(&H)";
             this.helpMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -231,10 +319,16 @@
                 this.fetchToolBtn,
                 this.pullToolBtn,
                 this.pushToolBtn,
+                this.githubToolBtn,
                 this.toolSep3,
                 this.logToolBtn,
                 this.discardToolBtn,
-                this.resetHardToolBtn});
+                this.resetHardToolBtn,
+                this.toolSep4,
+                this.stashToolBtn,
+                this.undoCommitToolBtn,
+                this.lastMsgToolBtn,
+                this.syncToolBtn});
             this.toolStrip1.Location = new System.Drawing.Point(0, 25);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Size = new System.Drawing.Size(1000, 25);
@@ -280,6 +374,11 @@
             this.pushToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.pushToolBtn.Click += new System.EventHandler(this.PushToolStripMenuItem_Click);
 
+            this.githubToolBtn.Text = "GitHub";
+            this.githubToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.githubToolBtn.ToolTipText = "GitHub CLI 面板：PR、Issue、登录状态";
+            this.githubToolBtn.Click += new System.EventHandler(this.GitHubPanelToolStripMenuItem_Click);
+
             this.logToolBtn.Text = "提交日志";
             this.logToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.logToolBtn.Click += new System.EventHandler(this.LogToolStripMenuItem_Click);
@@ -292,27 +391,91 @@
             this.resetHardToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.resetHardToolBtn.Click += new System.EventHandler(this.ResetHardToolStripMenuItem_Click);
 
+            this.stashToolBtn.Text = "储藏";
+            this.stashToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.stashToolBtn.ToolTipText = "保存当前改动到储藏，或管理已有储藏";
+            this.stashToolBtn.Click += new System.EventHandler(this.StashListToolStripMenuItem_Click);
+
+            this.undoCommitToolBtn.Text = "撤销上次提交";
+            this.undoCommitToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.undoCommitToolBtn.ToolTipText = "把上一次提交退回到暂存区（git reset --soft HEAD~1），改动不会丢";
+            this.undoCommitToolBtn.Click += new System.EventHandler(this.UndoCommitToolStripMenuItem_Click);
+
+            this.lastMsgToolBtn.Text = "上次信息";
+            this.lastMsgToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.lastMsgToolBtn.ToolTipText = "把上一次提交的说明填进提交框";
+            this.lastMsgToolBtn.Click += new System.EventHandler(this.LastMessageToolStripMenuItem_Click);
+
+            this.syncToolBtn.Text = "同步";
+            this.syncToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.syncToolBtn.ToolTipText = "fetch + pull --rebase + push 一次做完";
+            this.syncToolBtn.Click += new System.EventHandler(this.SyncToolStripMenuItem_Click);
+
+            this.filterLabel.Text = "过滤";
+            this.filterToolBox.AutoSize = false;
+            this.filterToolBox.Size = new System.Drawing.Size(120, 25);
+            this.filterToolBox.ToolTipText = "按路径筛选左右两边的文件列表";
+            this.filterToolBox.TextChanged += new System.EventHandler(this.FilterToolBox_TextChanged);
+
             //
             // statusStrip1
             //
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.repoStatusLabel,
-                this.branchStatusLabel});
+                this.branchStatusLabel,
+                this.aheadBehindLabel,
+                this.filterLabel,
+                this.filterToolBox});
+            this.repoStatusLabel.Spring = true;
+            this.filterLabel.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.filterToolBox.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.statusStrip1.Location = new System.Drawing.Point(0, 568);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(1000, 22);
             this.repoStatusLabel.Text = "未打开仓库";
             this.branchStatusLabel.Text = "";
             this.branchStatusLabel.ForeColor = System.Drawing.Color.DarkBlue;
+            this.aheadBehindLabel.Text = "";
+            this.aheadBehindLabel.ForeColor = System.Drawing.Color.FromArgb(87, 96, 106);
+
+            //
+            // splitDiff：左边文件列表，右边差异面板
+            //
+            this.splitDiff.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitDiff.Location = new System.Drawing.Point(0, 50);
+            this.splitDiff.Name = "splitDiff";
+            this.splitDiff.Size = new System.Drawing.Size(1000, 278);
+            this.splitDiff.SplitterDistance = 620;
+            this.splitDiff.TabIndex = 2;
+
+            this.splitDiff.Panel1.Controls.Add(this.splitContainer1);
+
+            this.splitDiff.Panel2.Controls.Add(this.lblDiffTitle);
+            this.splitDiff.Panel2.Controls.Add(this.richDiff);
+
+            this.lblDiffTitle.Text = "差异（选中左侧文件即可查看）";
+            this.lblDiffTitle.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblDiffTitle.Height = 22;
+            this.lblDiffTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.lblDiffTitle.BackColor = System.Drawing.Color.FromArgb(245, 245, 245);
+
+            this.richDiff.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.richDiff.ReadOnly = true;
+            this.richDiff.WordWrap = false;
+            this.richDiff.DetectUrls = false;
+            this.richDiff.HideSelection = false;
+            this.richDiff.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Both;
+            this.richDiff.Font = new System.Drawing.Font("Consolas", 9F);
+            this.richDiff.BackColor = System.Drawing.Color.White;
 
             //
             // splitContainer1
             //
             this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer1.Location = new System.Drawing.Point(0, 50);
+            this.splitContainer1.Location = new System.Drawing.Point(0, 0);
             this.splitContainer1.Name = "splitContainer1";
-            this.splitContainer1.Size = new System.Drawing.Size(1000, 278);
-            this.splitContainer1.SplitterDistance = 500;
+            this.splitContainer1.Size = new System.Drawing.Size(620, 278);
+            this.splitContainer1.SplitterDistance = 310;
             this.splitContainer1.TabIndex = 2;
 
             this.splitContainer1.Panel1.Controls.Add(this.labelUnstaged);
@@ -360,6 +523,9 @@
             //
             this.commitPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.commitPanel.Height = 120;
+            // 必须显式给宽度：否则子控件的 Anchor(Left|Right) 会按默认 200 的宽度算基准，
+            // 窗口一变宽，提交框就被拉到面板外面，按钮也会跑到屏幕右侧看不见。
+            this.commitPanel.Size = new System.Drawing.Size(1000, 120);
             this.commitPanel.Controls.Add(this.labelCommit);
             this.commitPanel.Controls.Add(this.textBoxCommit);
             this.commitPanel.Controls.Add(this.btnCommit);
@@ -406,6 +572,7 @@
             //
             this.outputPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.outputPanel.Height = 110;
+            this.outputPanel.Size = new System.Drawing.Size(1000, 110);
             this.outputPanel.Controls.Add(this.labelOutput);
             this.outputPanel.Controls.Add(this.textBoxOutput);
 
@@ -425,7 +592,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1000, 590);
-            this.Controls.Add(this.splitContainer1);
+            this.Controls.Add(this.splitDiff);
             this.Controls.Add(this.commitPanel);
             this.Controls.Add(this.outputPanel);
             this.Controls.Add(this.statusStrip1);
@@ -438,6 +605,10 @@
             this.splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
+            this.splitDiff.Panel1.ResumeLayout(false);
+            this.splitDiff.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitDiff)).EndInit();
+            this.splitDiff.ResumeLayout(false);
             this.commitPanel.ResumeLayout(false);
             this.commitPanel.PerformLayout();
             this.outputPanel.ResumeLayout(false);
