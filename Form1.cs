@@ -399,10 +399,11 @@ namespace betterGitGUI
             return list;
         }
 
-        // ---------- 刷绿：拆分提交 ----------
+        // ---------- 刷绿：贡献图选日 + 拆分提交 ----------
 
         /// <summary>
-        /// 把本地未提交的改动按用户选择的方式拆成多个提交。
+        /// 打开刷绿对话框：可以在贡献图样式的方格图上选日期，把改动拆成多个提交，
+        /// 也可以只生成空提交（不碰工作区）把贡献图刷绿。
         /// </summary>
         private void SplitCommitToolStripMenuItem_Click(object sender, EventArgs e)
         {

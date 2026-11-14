@@ -52,6 +52,9 @@
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="ContributionCalendar.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="GitRunner.cs" />
     <Compile Include="SplitCommitEngine.cs" />
     <Compile Include="SplitCommitForm.cs">

@@ -7,29 +7,20 @@ using System.Text.RegularExpressions;
 
 namespace betterGitGUI
 {
-    /// <summary>拆分粒度。</summary>
+    /// <summary>生成方式。</summary>
     public enum SplitGranularity
     {
-        ByFile,   // 每个文件一个提交
-        ByCount,  // 指定提交总数，按改动行数平均分配
-    }
-
-    /// <summary>提交时间策略。</summary>
-    public enum SplitDateMode
-    {
-        KeepToday,    // 全部落在今天
-        RecentDays,   // 最近 N 天内随机
-        DateRange,    // 指定日期区间内铺开
+        ByFile,     // 每个文件一个提交
+        ByCount,    // 指定提交总数，按改动行数平均分配
+        EmptyOnly,  // 只刷绿：不碰工作区，直接生成空提交
     }
 
     public class SplitOptions
     {
         public SplitGranularity Granularity = SplitGranularity.ByFile;
         public int CommitCount = 5;
-        public SplitDateMode DateMode = SplitDateMode.KeepToday;
-        public int RecentDays = 7;
-        public DateTime RangeStart = DateTime.Today.AddDays(-6);
-        public DateTime RangeEnd = DateTime.Today;
+        /// <summary>在贡献图上点选的日期（只取日期部分，引擎会自己去重、排序、丢弃未来日期）。</summary>
+        public List<DateTime> SelectedDays = new List<DateTime>();
         public string BaseMessage = "";
     }
 
@@ -56,11 +47,12 @@ namespace betterGitGUI
     }
 
     /// <summary>
-    /// 把工作区未提交的改动按选定方式拆成多个提交。
+    /// 把工作区未提交的改动按选定方式拆成多个提交（也可以什么都不改、只发空提交来刷绿贡献图）。
     ///
     /// 做法：先 git add -N 让未跟踪文件出现在 diff 里，然后反复「取当前剩余 diff 的前若干个改动行
     /// （或第一个文件）→ 生成零上下文补丁 → git apply --cached → commit」，每一步都重新取 diff，
     /// 因此行号始终基于当前暂存区状态，不需要维护行号偏移。
+    /// 提交时间由贡献图上点选的日期决定：提交在所选的日期里平均分配，具体时刻随机抖动。
     /// </summary>
     public static class SplitCommitEngine
     {
@@ -71,9 +63,12 @@ namespace betterGitGUI
 
         /// <summary>生成拆分计划（会执行 git add -N，索引里只多出 intent-to-add 记录）。</summary>
         public static SplitPlan BuildPlan(SplitOptions opt)
-        {
-            RequireRepository();
+        {            RequireRepository();
             EnsureIndexClean();
+
+            // 只刷绿：不碰工作区，也不需要改动；计划里的每个提交都将是空提交
+            if (opt.Granularity == SplitGranularity.EmptyOnly)
+                return BuildEmptyPlan(opt);
 
             // 只对「未跟踪文件」做 intent-to-add，让它们出现在 diff 里。
             // 不能用 git add -N -A：那是把删除/修改也一并暂存了，会绕过拆分直接混进第一个提交。
@@ -91,8 +86,30 @@ namespace betterGitGUI
             }
         }
 
+        /// <summary>只刷绿用的计划：没有改动、没有文件，只有一串时间错开的空提交。</summary>
+        private static SplitPlan BuildEmptyPlan(SplitOptions opt)
+        {
+            int count = opt.CommitCount;
+            if (count < 1) count = 1;
+            if (count > 1000) count = 1000;
+
+            var plan = new SplitPlan
+            {
+                Granularity = SplitGranularity.EmptyOnly,
+                TotalFiles = 0,
+                TotalLines = 0,
+            };
+            for (int i = 0; i < count; i++)
+            {
+                plan.Slices.Add(new SplitSlice { Index = i, Quota = 0, Lines = 0 });
+            }
+            AssignDatesAndMessages(plan, opt);
+            return plan;
+        }
+
         private static SplitPlan BuildPlanFromCurrentDiff(SplitOptions opt)
-        {            var diffText = GetDiffText();
+        {
+            var diffText = GetDiffText();
             var files = ParsePatch(diffText);
             if (files.Count == 0)
                 throw new InvalidOperationException("工作区没有未提交的改动，不需要拆分。");
@@ -174,6 +191,9 @@ namespace betterGitGUI
         {
             RequireRepository();
 
+            if (plan.Granularity == SplitGranularity.EmptyOnly)
+                return ExecuteEmpty(plan, log);
+
             var now = GetDiffText();
             if (Fingerprint(now) != plan.DiffFingerprint)
                 throw new InvalidOperationException("工作区改动在生成预览之后又发生变化了，请重新生成预览。");
@@ -233,6 +253,33 @@ namespace betterGitGUI
         public static void CleanupIndex()
         {
             GitRunner.Run("reset");
+        }
+
+        /// <summary>
+        /// 只刷绿：逐个发空提交，完全不读 diff、不碰暂存区。
+        /// 执行前再查一次暂存区，避免把它里面已有的内容顺手带进第一个空提交。
+        /// </summary>
+        private static int ExecuteEmpty(SplitPlan plan, Action<string> log)
+        {
+            EnsureIndexClean();
+
+            int made = 0;
+            for (int i = 0; i < plan.Slices.Count; i++)
+            {
+                var slice = plan.Slices[i];
+                var result = GitRunner.RunCommit("commit --allow-empty", slice.Message, MakeDateEnv(slice.When));
+                if (!result.Success)
+                {
+                    throw new InvalidOperationException(string.Format(
+                        "第 {0} 个空提交失败：{1}", i + 1,
+                        string.IsNullOrEmpty(result.StdErr) ? ("exit " + result.ExitCode) : result.StdErr.Trim()));
+                }
+
+                made++;
+                if (log != null)
+                    log(string.Format("已创建 {0}/{1}：{2}", made, plan.Slices.Count, FirstLine(slice.Message)));
+            }
+            return made;
         }
 
         // ---------- 前置检查 ----------
@@ -372,66 +419,100 @@ namespace betterGitGUI
             return string.Format("{0}（{1}/{2}）", baseMessage, index, total);
         }
 
+        /// <summary>
+        /// 把 count 个提交铺到贡献图上点选的日期里：
+        /// 提交多于天数时，先每天平均一份，余数随机分给不同的天（这就是「平均分配 + 抖动」）；
+        /// 提交少于天数时，按等间距挑出若干天，最后落在最近一天，不会挤在开头几天；
+        /// 每天的具体时刻在工作时间内随机，并且一定不超过当前时间。
+        /// </summary>
         private static List<DateTime> MakeDates(int count, SplitOptions opt)
         {
             var list = new List<DateTime>();
             if (count <= 0) return list;
 
-            var now = DateTime.Now;
-            var rnd = new Random();
+            var days = NormalizeDays(opt.SelectedDays);
+            if (days.Count == 0)
+                throw new InvalidOperationException("请先在贡献图上选择至少一天。");
 
-            switch (opt.DateMode)
+            var rnd = new Random();
+            var perDay = new int[days.Count];
+
+            if (count >= days.Count)
             {
-                case SplitDateMode.RecentDays:
+                int baseCount = count / days.Count;
+                int extra = count % days.Count;
+                for (int i = 0; i < days.Count; i++) perDay[i] = baseCount;
+
+                if (extra > 0)
                 {
-                    int days = opt.RecentDays;
-                    if (days < 1) days = 1;
-                    if (days > 3650) days = 3650;
-                    for (int i = 0; i < count; i++)
+                    // 余数落在哪几天是随机的：每次生成预览的分布都不完全一样
+                    var order = new List<int>();
+                    for (int i = 0; i < days.Count; i++) order.Add(i);
+                    for (int i = order.Count - 1; i > 0; i--)
                     {
-                        var day = DateTime.Today.AddDays(-rnd.Next(0, days));
-                        list.Add(day.AddMinutes(rnd.Next(8 * 60, 23 * 60)));
+                        int j = rnd.Next(i + 1);
+                        int tmp = order[i]; order[i] = order[j]; order[j] = tmp;
                     }
-                    list.Sort();
-                    break;
+                    for (int i = 0; i < extra; i++) perDay[order[i]]++;
                 }
-                case SplitDateMode.DateRange:
+            }
+            else
+            {
+                // 提交比天数少：等间距铺开，第一个在最早所选日期，最后一个在最近所选日期
+                for (int k = 0; k < count; k++)
                 {
-                    var start = opt.RangeStart.Date;
-                    var end = opt.RangeEnd.Date;
-                    if (start > end) { var t = start; start = end; end = t; }
-                    int days = (int)(end - start).TotalDays + 1;
-                    for (int i = 0; i < count; i++)
-                    {
-                        int dayOffset = count <= days
-                            ? (int)Math.Round(i * (days - 1) / (double)Math.Max(1, count - 1))
-                            : (int)((long)i * days / count);
-                        var day = start.AddDays(dayOffset);
-                        list.Add(day.AddMinutes(rnd.Next(8 * 60, 23 * 60)));
-                    }
-                    list.Sort();
-                    break;
-                }
-                default:
-                {
-                    // 全部落在今天：从当前时间往前推，保证先后有序
-                    var from = now.AddMinutes(-Math.Min(count, 720));
-                    for (int i = 0; i < count; i++)
-                        list.Add(from.AddMinutes(i));
-                    break;
+                    int idx = count == 1
+                        ? days.Count - 1
+                        : (int)Math.Round(k * (days.Count - 1) / (double)(count - 1));
+                    if (idx < 0) idx = 0;
+                    if (idx > days.Count - 1) idx = days.Count - 1;
+                    perDay[idx]++;
                 }
             }
 
-            // 不允许出现未来时间（未来的提交不会计入 GitHub 贡献图）
-            for (int i = 0; i < list.Count; i++)
+            var now = DateTime.Now;
+            for (int i = 0; i < days.Count; i++)
             {
-                if (list[i] > now)
-                {
-                    var clamped = now.AddSeconds(-(list.Count - i) * 30);
-                    list[i] = clamped < now ? clamped : now.AddSeconds(-1);
-                }
+                var times = new List<DateTime>();
+                for (int k = 0; k < perDay[i]; k++)
+                    times.Add(RandomMomentOfDay(days[i], rnd, now));
+                times.Sort();
+                list.AddRange(times);
             }
             return list;
+        }
+
+        /// <summary>只保留日期部分、去重、排序，并丢掉未来日期。</summary>
+        private static List<DateTime> NormalizeDays(List<DateTime> days)
+        {
+            var result = new List<DateTime>();
+            if (days == null) return result;
+
+            var today = DateTime.Today;
+            var sorted = new SortedSet<DateTime>();
+            foreach (var d in days)
+            {
+                var day = d.Date;
+                if (day > today) continue; // 未来的提交不会被贡献图统计
+                sorted.Add(day);
+            }
+            result.AddRange(sorted);
+            return result;
+        }
+
+        /// <summary>某天的随机时刻：上班时间之后随机，秒也随机；今天不能超过此刻。</summary>
+        private static DateTime RandomMomentOfDay(DateTime day, Random rnd, DateTime now)
+        {
+            var dayStart = day.Date;
+            var latest = dayStart.AddHours(23).AddMinutes(59).AddSeconds(59);
+            if (dayStart == now.Date) latest = now.AddSeconds(-1);
+
+            var earliest = dayStart.AddHours(8).AddMinutes(rnd.Next(0, 30));
+            if (latest <= earliest) earliest = dayStart; // 今天还没到 8 点
+            int span = (int)(latest - earliest).TotalSeconds;
+            if (span < 1) return latest;
+
+            return earliest.AddSeconds(rnd.Next(0, span + 1));
         }
 
         // ---------- diff 解析 ----------

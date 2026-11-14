@@ -206,7 +206,7 @@
             this.greenMenu.Text = "刷绿(&G)";
             this.greenMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.splitCommitMenuItem});
-            this.splitCommitMenuItem.Text = "拆分提交（刷绿）...";
+            this.splitCommitMenuItem.Text = "刷绿（贡献图 / 拆分提交）...";
             this.splitCommitMenuItem.Click += new System.EventHandler(this.SplitCommitToolStripMenuItem_Click);
 
             this.helpMenu.Text = "帮助(&H)";
