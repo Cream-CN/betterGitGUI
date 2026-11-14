@@ -67,6 +67,10 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="RepoStore.cs" />
+    <Compile Include="AppSettings.cs" />
+    <Compile Include="SettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="StashForm.cs">
       <SubType>Form</SubType>
     </Compile>

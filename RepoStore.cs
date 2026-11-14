@@ -11,7 +11,11 @@ namespace betterGitGUI
     /// </summary>
     public static class RepoStore
     {
-        private const int MaxCount = 10;
+        /// <summary>最多保留几条，数量可在 settings.ini 的 MaxRecentRepos 里改。</summary>
+        private static int MaxCount
+        {
+            get { return AppSettings.MaxRecentRepos; }
+        }
 
         private static string SettingDir
         {
@@ -39,6 +43,7 @@ namespace betterGitGUI
                     var path = line.Trim();
                     if (path.Length == 0) continue;
                     if (result.Contains(path)) continue;
+                    if (result.Count >= MaxCount) break;
                     result.Add(path);
                 }
             }

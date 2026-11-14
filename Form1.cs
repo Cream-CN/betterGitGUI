@@ -12,8 +12,8 @@ namespace betterGitGUI
 {
     public partial class Form1 : Form
     {
-        /// <summary>差异面板最多渲染多少行，防止超大 diff 卡死界面。</summary>
-        private const int MaxDiffLines = 5000;
+        // 差异面板的行数 / 大小上限来自 AppSettings（%USERPROFILE%\.beetergitgui\settings.ini），
+        // 这里不再写死常量。
 
         private List<GitStatusEntry> _unstaged = new List<GitStatusEntry>();
         private List<GitStatusEntry> _staged = new List<GitStatusEntry>();
@@ -51,6 +51,7 @@ namespace betterGitGUI
             LoadEmbeddedIcon();
 
             BuildContextMenus();
+            BuildSettingsMenu();
             WireEvents();
         }
 
@@ -78,6 +79,9 @@ namespace betterGitGUI
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            AppSettings.Initialize(); // 读入 settings.ini，缺失时生成默认配置
+            ApplyDiffFont();
+
             Log("betterGitGUI 已启动。git: " + GitRunner.GitExe);
             Log("请点击「打开」选择一个 Git 仓库目录，或点击「初始化」新建仓库。");
 
@@ -98,6 +102,74 @@ namespace betterGitGUI
             {
                 LoadRepository(root);
             }
+        }
+
+        // ---------- 设置 / 首选项 ----------
+
+        /// <summary>在菜单栏里插入「设置」菜单（首选项 / 打开配置文件）。</summary>
+        private void BuildSettingsMenu()
+        {
+            var settingsMenu = new ToolStripMenuItem("设置(&S)");
+
+            var preferencesItem = new ToolStripMenuItem("首选项...");
+            preferencesItem.Click += (s, e) => OpenPreferences();
+
+            var openConfigItem = new ToolStripMenuItem("打开配置文件 (settings.ini)");
+            openConfigItem.Click += (s, e) => OpenConfigFile();
+
+            settingsMenu.DropDownItems.Add(preferencesItem);
+            settingsMenu.DropDownItems.Add(openConfigItem);
+
+            // 「关于」在帮助菜单里，设置菜单排在帮助之前
+            var helpIndex = menuStrip1.Items.IndexOf(helpMenu);
+            if (helpIndex >= 0) menuStrip1.Items.Insert(helpIndex, settingsMenu);
+            else menuStrip1.Items.Add(settingsMenu);
+        }
+
+        private void OpenPreferences()
+        {
+            using (var dlg = new SettingsForm())
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                ApplyDiffFont();
+                _recentRepos = RepoStore.Load();
+                ReloadRecentMenu();
+                Log("首选项已保存：" + AppSettings.FilePath);
+            }
+        }
+
+        private void OpenConfigFile()
+        {
+            try
+            {
+                if (!File.Exists(AppSettings.FilePath)) AppSettings.Save();
+                Process.Start("explorer.exe", "/select,\"" + AppSettings.FilePath + "\"");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "打开配置文件失败：" + ex.Message,
+                    "打开配置文件", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>按配置里的字体名 / 字号套用差异面板字体，并重绘一遍保持着色。</summary>
+        private void ApplyDiffFont()
+        {
+            var font = SettingsForm.CreateFont(AppSettings.DiffFontName, AppSettings.DiffFontSize);
+            richDiff.Font = font;
+            if (_diffLines.Count > 0) RenderDiff(_diffLines);
+        }
+
+        /// <summary>
+        /// 危险操作（丢弃改动、硬重置、中止合并/变基等）的确认框。
+        /// 首选项里关掉「危险操作前弹出确认」后直接放行。
+        /// </summary>
+        private bool ConfirmDanger(string text, string title)
+        {
+            if (!AppSettings.ConfirmDangerous) return true;
+            return MessageBox.Show(this, text, title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
+                == DialogResult.Yes;
         }
 
         // ---------- 仓库管理 ----------
@@ -539,6 +611,9 @@ namespace betterGitGUI
             _diffMode = mode;
             _diffFile = null;
 
+            var maxDiffLines = AppSettings.MaxDiffLines;
+            var maxDiffSizeKB = AppSettings.MaxDiffSizeKB;
+
             var modeText = mode == DiffMode.Staged ? "已暂存" : mode == DiffMode.Unstaged ? "未暂存" : "未跟踪";
             lblDiffTitle.Text = "差异：" + path + "  [" + modeText + "]" + (entry.IsUnmerged ? "  —— 存在冲突" : "");
 
@@ -581,10 +656,10 @@ namespace betterGitGUI
                 else
                 {
                     var contentLines = content.Text.Replace("\r\n", "\n").Split('\n');
-                    if (contentLines.Length > MaxDiffLines)
+                    if (contentLines.Length > maxDiffLines)
                     {
-                        lines.Add(new DiffLine { Text = "（文件过长，仅显示前 " + MaxDiffLines + " 行）", ForeColor = Color.Gray });
-                        contentLines = contentLines.Take(MaxDiffLines).ToArray();
+                        lines.Add(new DiffLine { Text = "（文件过长，仅显示前 " + maxDiffLines + " 行）", ForeColor = Color.Gray });
+                        contentLines = contentLines.Take(maxDiffLines).ToArray();
                     }
                     foreach (var l in contentLines) lines.Add(DiffRenderer.AsAddedLine(l, -1));
                 }
@@ -606,6 +681,16 @@ namespace betterGitGUI
                 return;
             }
 
+            if (maxDiffSizeKB > 0 && Encoding.UTF8.GetByteCount(result.StdOut) > maxDiffSizeKB * 1024L)
+            {
+                RenderDiff(new List<DiffLine>
+                {
+                    new DiffLine { Text = "（差异过大：超过 " + maxDiffSizeKB + " KB，已隐藏不显示）", ForeColor = Color.Gray, Bold = true },
+                    new DiffLine { Text = "（如需查看，可在 %USERPROFILE%\\.beetergitgui\\settings.ini 里调大 MaxDiffSizeKB，或改成 0 取消限制）", ForeColor = Color.Gray },
+                });
+                return;
+            }
+
             diffFile = DiffFile.Parse(result.StdOut);
             lines = DiffRenderer.BuildLines(result.StdOut);
 
@@ -613,10 +698,10 @@ namespace betterGitGUI
             {
                 lines.Add(new DiffLine { Text = "（没有可显示的差异）", ForeColor = Color.Gray });
             }
-            else if (lines.Count > MaxDiffLines)
+            else if (lines.Count > maxDiffLines)
             {
-                lines = lines.Take(MaxDiffLines).ToList();
-                lines.Add(new DiffLine { Text = "（差异过长，仅显示前 " + MaxDiffLines + " 行）", ForeColor = Color.Gray });
+                lines = lines.Take(maxDiffLines).ToList();
+                lines.Add(new DiffLine { Text = "（差异过长，仅显示前 " + maxDiffLines + " 行）", ForeColor = Color.Gray });
             }
 
             if (seq != _diffSeq) return;
@@ -655,9 +740,10 @@ namespace betterGitGUI
                     result.Error = "（文件已不存在）";
                     return result;
                 }
-                if (new FileInfo(fullPath).Length > 2 * 1024 * 1024)
+                var maxPreviewKB = AppSettings.MaxFilePreviewKB;
+                if (maxPreviewKB > 0 && new FileInfo(fullPath).Length > maxPreviewKB * 1024L)
                 {
-                    result.Error = "（文件超过 2MB，不预览）";
+                    result.Error = "（文件超过 " + maxPreviewKB + " KB，不预览）";
                     return result;
                 }
 
@@ -704,10 +790,9 @@ namespace betterGitGUI
             if (confirmDiscard)
             {
                 var hunk = _diffFile.Hunks[hunkIndex];
-                var answer = MessageBox.Show(this,
+                if (!ConfirmDanger(
                     "丢弃这一块改动？\n\n+ " + hunk.Added + " 行，- " + hunk.Removed + " 行\n\n丢弃后无法恢复。",
-                    "丢弃改动块", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                if (answer != DialogResult.Yes) return;
+                    "丢弃改动块")) return;
             }
 
             var patch = _diffFile.BuildPatch(new[] { hunkIndex });
@@ -1125,17 +1210,13 @@ namespace betterGitGUI
 
         private void MergeAbortToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var r = MessageBox.Show(this, "中止当前合并并回到合并前的状态？\n已解决的冲突改动会丢失。",
-                "中止合并", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            if (r != DialogResult.Yes) return;
+            if (!ConfirmDanger("中止当前合并并回到合并前的状态？\n已解决的冲突改动会丢失。", "中止合并")) return;
             RunGitBusy("merge --abort", true);
         }
 
         private void RebaseAbortToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var r = MessageBox.Show(this, "中止当前变基并回到变基前的状态？\n变基过程中已做的改动会丢失。",
-                "中止变基", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            if (r != DialogResult.Yes) return;
+            if (!ConfirmDanger("中止当前变基并回到变基前的状态？\n变基过程中已做的改动会丢失。", "中止变基")) return;
             RunGitBusy("rebase --abort", true);
         }
 
@@ -1155,9 +1236,7 @@ namespace betterGitGUI
             else if (mode == "theirs") label = "用「对方版本」（被合并分支的版本）覆盖这些文件？";
             else label = "把所选文件标记为已解决（暂存当前磁盘上的内容）？";
 
-            var answer = MessageBox.Show(this, label + "\n\n" + string.Join("\n", paths),
-                "解决冲突", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            if (answer != DialogResult.Yes) return;
+            if (!ConfirmDanger(label + "\n\n" + string.Join("\n", paths), "解决冲突")) return;
 
             SetBusy(true);
             try
@@ -1271,6 +1350,12 @@ namespace betterGitGUI
             var paths = GetSelectedPaths(listUnstaged);
             if (paths.Count == 0)
             {
+                // 关掉确认框时不能替用户做「丢弃全部」的决定，只提示先选中文件
+                if (!AppSettings.ConfirmDangerous)
+                {
+                    MessageBox.Show(this, "请先在左侧未暂存列表中选择要丢弃的文件。", "丢弃改动");
+                    return;
+                }
                 var r = MessageBox.Show(this,
                     "未选择文件。是否丢弃所有未暂存改动？",
                     "丢弃改动", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
@@ -1279,20 +1364,14 @@ namespace betterGitGUI
             }
             else
             {
-                var r = MessageBox.Show(this,
-                    "确定丢弃所选 " + paths.Count + " 个文件的改动？此操作不可恢复。",
-                    "丢弃改动", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                if (r != DialogResult.Yes) return;
+                if (!ConfirmDanger("确定丢弃所选 " + paths.Count + " 个文件的改动？此操作不可恢复。", "丢弃改动")) return;
                 RunGitBusy("checkout -- " + GitRunner.JoinPaths(paths), true);
             }
         }
 
         private void ResetHardToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var r = MessageBox.Show(this,
-                "硬重置将丢弃所有未提交改动并恢复到 HEAD。\n确定继续？",
-                "硬重置", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            if (r != DialogResult.Yes) return;
+            if (!ConfirmDanger("硬重置将丢弃所有未提交改动并恢复到 HEAD。\n确定继续？", "硬重置")) return;
             RunGitBusy("reset --hard", true);
         }
 
