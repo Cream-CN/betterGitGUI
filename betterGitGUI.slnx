@@ -1,3 +1,10 @@
 <Solution>
   <Project Path="betterGitGUI.csproj" Id="b27594cd-6ed7-46cf-8939-8cbbf8d5115d" />
+  <Project Path="editior/Editior/Editior.csproj" Id="6bb6520a-6f1f-4f1e-9abd-b568d6c3ab20">
+    <BuildDependency Project="betterGitGUI.csproj" />
+    <BuildDependency Project="guidgen/guid/guid.csproj" />
+    <BuildDependency Project="VisibleCMake/VisibleCMake/VisibleCMake.csproj" />
+  </Project>
+  <Project Path="guidgen/guid/guid.csproj" Id="54b38abb-3b9f-4c71-9a97-97c0894b7ed6" />
+  <Project Path="VisibleCMake/VisibleCMake/VisibleCMake.csproj" Id="7c4e2a96-3b28-4d0f-8e5a-9a6b2c7d4e31" />
 </Solution>

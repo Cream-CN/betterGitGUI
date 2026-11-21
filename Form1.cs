@@ -35,6 +35,9 @@ namespace betterGitGUI
 
         private List<string> _recentRepos = new List<string>();
 
+        /// <summary>命令行传入的仓库路径（由 Editior 等外部程序打开时使用）。</summary>
+        private string _startupRepository;
+
         private enum DiffMode
         {
             None,
@@ -43,15 +46,21 @@ namespace betterGitGUI
             Untracked,
         }
 
-        public Form1()
+        public Form1() : this(null)
+        {
+        }
+
+        public Form1(string startupRepository)
         {
             InitializeComponent();
+            _startupRepository = startupRepository;
             GitRunner.ProbeGit();
             this.Load += Form1_Load;
             LoadEmbeddedIcon();
 
             BuildContextMenus();
             BuildSettingsMenu();
+            BuildToolsMenu();
             WireEvents();
         }
 
@@ -87,6 +96,25 @@ namespace betterGitGUI
 
             _recentRepos = RepoStore.Load();
             ReloadRecentMenu();
+
+            // 优先打开命令行传入的仓库（Editior 的「在 BetterGitGUI 中打开」会传）
+            if (_startupRepository != null)
+            {
+                try
+                {
+                    var startup = Path.GetFullPath(_startupRepository);
+                    if (GitRunner.IsGitRepository(startup))
+                    {
+                        LoadRepository(startup);
+                        Log("从命令行打开仓库：" + startup);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("命令行仓库路径无效：" + ex.Message);
+                }
+            }
 
             // 默认尝试打开当前程序所在目录（如果本身是仓库），否则打开上次用的仓库
             var here = AppDomain.CurrentDomain.BaseDirectory;
@@ -126,8 +154,41 @@ namespace betterGitGUI
             else menuStrip1.Items.Add(settingsMenu);
         }
 
-        private void OpenPreferences()
+        /// <summary>插入「工具」菜单：调用 Editior 打开当前仓库。</summary>
+        private void BuildToolsMenu()
         {
+            var toolsMenu = new ToolStripMenuItem("工具(&T)");
+
+            var openInEditior = new ToolStripMenuItem("用 Editior 打开当前仓库");
+            openInEditior.Click += (s, e) => OpenRepositoryInEditior();
+
+            var guidItem = new ToolStripMenuItem("GUID 生成器…");
+            guidItem.Click += (s, e) => LaunchGuidGenerator();
+
+            var editiorHelp = new ToolStripMenuItem("Editior 在哪里？");
+            editiorHelp.Click += (s, e) =>
+            {
+                var exe = FindEditiorExe();
+                MessageBox.Show(this,
+                    exe == null
+                        ? "没有找到 Editior.exe。\n请先编译 editior\\Editior 项目。"
+                        : "找到 Editior：\n" + exe,
+                    "Editior", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            toolsMenu.DropDownItems.Add(openInEditior);
+            toolsMenu.DropDownItems.Add(guidItem);
+            toolsMenu.DropDownItems.Add(editiorHelp);
+
+            toolsMenu.DropDownOpening += (s, e) =>
+                openInEditior.Enabled = GitRunner.WorkingDir != null && Directory.Exists(GitRunner.WorkingDir);
+
+            var helpIndex = menuStrip1.Items.IndexOf(helpMenu);
+            if (helpIndex >= 0) menuStrip1.Items.Insert(helpIndex, toolsMenu);
+            else menuStrip1.Items.Add(toolsMenu);
+        }
+
+        private void OpenPreferences()        {
             using (var dlg = new SettingsForm())
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
@@ -1477,6 +1538,7 @@ namespace betterGitGUI
             var miRresolved = new ToolStripMenuItem("标记为已解决（暂存当前内容）");
             var miExplorer = new ToolStripMenuItem("在资源管理器中显示");
             var miEditor = new ToolStripMenuItem("用默认程序打开");
+            var miEditior = new ToolStripMenuItem("用 Editior 打开");
             var miCopyPath = new ToolStripMenuItem("复制路径");
             var miDiscard = new ToolStripMenuItem("丢弃所选改动");
 
@@ -1487,6 +1549,7 @@ namespace betterGitGUI
             miRresolved.Click += (s, e) => ResolveConflict("resolved");
             miExplorer.Click += (s, e) => OpenInExplorer(GetSelectedPaths(list));
             miEditor.Click += (s, e) => OpenWithDefaultProgram(GetSelectedPaths(list));
+            miEditior.Click += (s, e) => OpenInEditior(GetSelectedPaths(list));
             miCopyPath.Click += (s, e) =>
             {
                 var paths = GetSelectedPaths(list);
@@ -1503,6 +1566,7 @@ namespace betterGitGUI
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(miExplorer);
             menu.Items.Add(miEditor);
+            menu.Items.Add(miEditior);
             menu.Items.Add(miCopyPath);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(miDiscard);
@@ -1523,6 +1587,7 @@ namespace betterGitGUI
                 miRresolved.Enabled = has && conflicted;
                 miExplorer.Enabled = has;
                 miEditor.Enabled = has;
+                miEditior.Enabled = has;
                 miCopyPath.Enabled = has;
                 miDiscard.Enabled = has && unstaged && !conflicted;
             };
@@ -1571,6 +1636,157 @@ namespace betterGitGUI
             {
                 MessageBox.Show(this, "打开文件失败：" + ex.Message);
             }
+        }
+
+        // ---------- 与 Editior 集成 ----------
+
+        /// <summary>在程序目录附近寻找 Editior.exe。</summary>
+        private static string FindEditiorExe()
+        {
+            var dir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+            for (int i = 0; i < 6 && dir != null; i++)
+            {
+                var candidates = new[]
+                {
+                    Path.Combine(dir, "editior", "Editior", "bin", "Debug", "Editior.exe"),
+                    Path.Combine(dir, "editior", "Editior", "bin", "Release", "Editior.exe"),
+                    Path.Combine(dir, "Editior", "bin", "Debug", "Editior.exe"),
+                    Path.Combine(dir, "Editior", "bin", "Release", "Editior.exe"),
+                    Path.Combine(dir, "Editior.exe")
+                };
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate)) return candidate;
+                }
+                var parent = Path.GetDirectoryName(dir);
+                if (parent == null || parent == dir) break;
+                dir = parent;
+            }
+            return null;
+        }
+
+        private void LaunchEditior(IEnumerable<string> targets)
+        {
+            var exe = FindEditiorExe();
+            if (exe == null)
+            {
+                MessageBox.Show(this,
+                    "没有找到 Editior.exe。\n请先编译 editior\\Editior 项目，或把它放在 betterGitGUI.exe 附近。",
+                    "Editior", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var args = new List<string>();
+            foreach (var target in targets)
+            {
+                if (target != null && target.Length > 0) args.Add(GitRunner.Quote(target));
+            }
+            if (args.Count == 0) return;
+
+            try
+            {
+                var psi = new ProcessStartInfo(exe);
+                psi.UseShellExecute = false;
+                psi.Arguments = string.Join(" ", args);
+                psi.WorkingDirectory = Path.GetDirectoryName(exe);
+                Process.Start(psi);
+                Log("用 Editior 打开：" + string.Join(" ", args));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "启动 Editior 失败：" + ex.Message,
+                    "Editior", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void OpenRepositoryInEditior()
+        {
+            var dir = GitRunner.WorkingDir;
+            if (dir == null || !Directory.Exists(dir)) return;
+            LaunchEditior(new[] { dir });
+        }
+
+        private void OpenInEditior(List<string> paths)
+        {
+            if (paths.Count == 0) return;
+
+            var fullPaths = new List<string>();
+            foreach (var relative in paths)
+            {
+                var full = Path.Combine(GitRunner.WorkingDir ?? "", relative);
+                if (File.Exists(full) || Directory.Exists(full)) fullPaths.Add(full);
+            }
+            if (fullPaths.Count == 0)
+            {
+                MessageBox.Show(this, "选中的文件已不存在。");
+                return;
+            }
+            LaunchEditior(fullPaths);
+        }
+
+        /// <summary>寻找 guidgen 的 guid.exe（Editior 不可用时的退路）。</summary>
+        private static string FindGuidGeneratorExe()
+        {
+            var dir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+            for (int i = 0; i < 6 && dir != null; i++)
+            {
+                var candidates = new[]
+                {
+                    Path.Combine(dir, "guidgen", "guid", "bin", "Debug", "guid.exe"),
+                    Path.Combine(dir, "guidgen", "guid", "bin", "Release", "guid.exe"),
+                    Path.Combine(dir, "guid", "bin", "Debug", "guid.exe"),
+                    Path.Combine(dir, "guid.exe")
+                };
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate)) return candidate;
+                }
+                var parent = Path.GetDirectoryName(dir);
+                if (parent == null || parent == dir) break;
+                dir = parent;
+            }
+            return null;
+        }
+
+        /// <summary>优先用 Editior 内置的 GUID 生成器，找不到则退回独立 guidgen。</summary>
+        private void LaunchGuidGenerator()
+        {
+            var editior = FindEditiorExe();
+            if (editior != null)
+            {
+                try
+                {
+                    var psi = new ProcessStartInfo(editior);
+                    psi.UseShellExecute = false;
+                    psi.Arguments = "--guid";
+                    psi.WorkingDirectory = Path.GetDirectoryName(editior);
+                    Process.Start(psi);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Log("启动 Editior GUID 生成器失败：" + ex.Message);
+                }
+            }
+
+            var guidExe = FindGuidGeneratorExe();
+            if (guidExe != null)
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo(guidExe) { UseShellExecute = true });
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "启动 GUID 生成器失败：" + ex.Message);
+                    return;
+                }
+            }
+
+            MessageBox.Show(this,
+                "没有找到 GUID 生成器。\n请先编译 editior\\Editior 或 guidgen\\guid 项目。",
+                "GUID 生成器", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         // ---------- 过滤 ----------

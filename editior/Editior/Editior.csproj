@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6BB6520A-6F1F-4F1E-9ABD-B568D6C3AB20}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>Editior</RootNamespace>
+    <AssemblyName>Editior</AssemblyName>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build" Version="17.14.28" />
+    <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
+  </ItemGroup>
+  <!--
+    说明：本项目是旧式（非 SDK 风格）csproj，dotnet build 不会为 PackageReference
+    自动注入编译引用，因此这里按 NuGet 还原出来的包路径显式引用。
+  -->
+  <ItemGroup>
+    <Reference Include="Microsoft.Build">
+      <HintPath>$(NuGetPackageRoot)microsoft.build\17.14.28\lib\net472\Microsoft.Build.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.Build.Framework">
+      <HintPath>$(NuGetPackageRoot)microsoft.build.framework\17.14.28\lib\net472\Microsoft.Build.Framework.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.SolutionPersistence">
+      <HintPath>$(NuGetPackageRoot)microsoft.visualstudio.solutionpersistence\1.0.52\lib\net472\Microsoft.VisualStudio.SolutionPersistence.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.NET.StringTools">
+      <HintPath>$(NuGetPackageRoot)microsoft.net.stringtools\17.14.28\lib\net472\Microsoft.NET.StringTools.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.IO.Redist">
+      <HintPath>$(NuGetPackageRoot)microsoft.io.redist\6.1.0\lib\net472\Microsoft.IO.Redist.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>$(NuGetPackageRoot)system.collections.immutable\9.0.0\lib\net462\System.Collections.Immutable.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Reflection.Metadata">
+      <HintPath>$(NuGetPackageRoot)system.reflection.metadata\9.0.0\lib\net462\System.Reflection.Metadata.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Reflection.MetadataLoadContext">
+      <HintPath>$(NuGetPackageRoot)system.reflection.metadataloadcontext\9.0.0\lib\net462\System.Reflection.MetadataLoadContext.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Configuration.ConfigurationManager">
+      <HintPath>$(NuGetPackageRoot)system.configuration.configurationmanager\9.0.0\lib\net462\System.Configuration.ConfigurationManager.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Text.Json">
+      <HintPath>$(NuGetPackageRoot)system.text.json\9.0.0\lib\net462\System.Text.Json.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Text.Encodings.Web">
+      <HintPath>$(NuGetPackageRoot)system.text.encodings.web\9.0.0\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.IO.Pipelines">
+      <HintPath>$(NuGetPackageRoot)system.io.pipelines\9.0.0\lib\net462\System.IO.Pipelines.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Diagnostics.DiagnosticSource">
+      <HintPath>$(NuGetPackageRoot)system.diagnostics.diagnosticsource\9.0.0\lib\net462\System.Diagnostics.DiagnosticSource.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>$(NuGetPackageRoot)system.memory\4.6.0\lib\net462\System.Memory.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>$(NuGetPackageRoot)system.buffers\4.6.0\lib\net462\System.Buffers.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>$(NuGetPackageRoot)system.numerics.vectors\4.6.0\lib\net462\System.Numerics.Vectors.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>$(NuGetPackageRoot)system.runtime.compilerservices.unsafe\6.1.0\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Security.Principal.Windows">
+      <HintPath>$(NuGetPackageRoot)system.security.principal.windows\5.0.0\lib\net461\System.Security.Principal.Windows.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Dataflow">
+      <HintPath>$(NuGetPackageRoot)system.threading.tasks.dataflow\9.0.0\lib\net462\System.Threading.Tasks.Dataflow.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions">
+      <HintPath>$(NuGetPackageRoot)system.threading.tasks.extensions\4.6.0\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces">
+      <HintPath>$(NuGetPackageRoot)microsoft.bcl.asyncinterfaces\9.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="SyntaxDefinitions.cs" />
+    <Compile Include="SyntaxTokenizer.cs" />
+    <Compile Include="SyntaxHighlighter.cs" />
+    <Compile Include="Minimap.cs" />
+    <Compile Include="GitSupport.cs" />
+    <Compile Include="SettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FileFormatDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GuidGenerator.cs" />
+    <Compile Include="DataCodeEngine.cs" />
+    <Compile Include="DataCodeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SolutionParser.cs" />
+    <Compile Include="VisibleCMakeSupport.cs" />
+    <Compile Include="Document.cs" />
+    <Compile Include="MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

@@ -87,8 +87,38 @@ ConfirmDangerous=true
 | `MaxRecentRepos` | 10 | 「最近打开」保留并自动打开的仓库数量 1 - 100 | 是 |
 | `ConfirmDangerous` | true | 危险操作前是否弹确认框；关掉后「丢弃改动」必须先选中文件，不会替你丢弃全部 | 是 |
 
+## 可视化 CMake / GNU Make（VisibleCMake）
+
+`VisibleCMake\VisibleCMake\VisibleCMake.csproj`，同样是 .NET 4.8.1 WinForms 程序：不背语法也能把 CMake 与 GNU Make 的构建配置点出来。
+
+- **左侧目标树**：一个工程里可以有多个目标（可执行文件 / 静态库 / 共享库 / 接口库），新建、复制、删除都在这里
+- **右侧表单**：目标名称、输出名、Windows 子系统（`-mwindows`）、源文件、头文件、包含目录、宏定义、编译选项、链接目录、链接库、构建后命令、附加 CMake 代码
+- **工程级配置**：CMake 最低版本、C/C++ 标准、默认构建类型、构建 / 运行时 / 归档输出目录、全局包含目录与定义、安装规则、测试、`compile_commands.json`、Makefile 文件名
+- **两套产物同时生成**：`CMakeLists.txt` 与独立的 GNU `Makefile`（`all` / `clean` / `run`、按源文件显式规则、`-MMD -MP` 头文件依赖、静态库 `ar rcs`、共享库 `-shared`、Windows 与 Unix 分支各自的 `del` / `rm`、`mkdir -p`），改一处两边同步
+- **反向导入**：`文件 → 导入 CMakeLists.txt` 把已有工程读进界面（`add_executable` / `add_library` / `target_*` / `set_target_properties` / `install` 等），认不出的语句原样留在「附加 CMake 代码」里，不丢内容
+- **一键构建**：`CMake 配置 / 构建 / 清理 / 运行`（调用 cmake）与 `make 构建`（调用 GNU make），命令行逐行进「构建」页签，可按错误/警告着色，可中途停止
+- **预览即真**：`CMakeLists.txt`、`Makefile` 页签就是即将写盘的内容，支持复制、另存为、在 Editior 中打开；写盘前自动备份成 `.bak`
+- **工程文件**：`.vcmake`（JSON），设置存 `%APPDATA%\VisibleCMake\settings.json`；启动参数可以是目录（自动找 `.vcmake`，没有则导入该目录的 `CMakeLists.txt`）或某个 `.vcmake`
+- **自检**：`VisibleCMake.exe --selftest` 生成样例工程并检查两种生成物、存读、导入与 `make -n` 解析；`VisibleCMake.exe --uitest` 在屏幕外创建主窗体，检查 5 个页签有没有控件重叠
+
+### 和 Editior 的联动
+
+- Editior 的「工具 → 可视化 CMake / Make（VisibleCMake）…」（`Ctrl+Shift+M`）或工具栏 `CMake / Make` 按钮，会把**当前文件所在目录**（没开文件时用已打开的文件夹）交给 VisibleCMake，按目录定位工程
+- VisibleCMake 里「工具 → 在 Editior 中打开」反向打开当前工程目录；也能打开 BetterGitGUI、在资源管理器中定位
+- 两个程序都按目录约定互相找 exe（`VisibleCMake\VisibleCMake\bin\{Debug,Release}\VisibleCMake.exe`、`editior\Editior\bin\{Debug,Release}\Editior.exe`），所以先编译一次就能互相跳转
+
 ## 依赖
 
 - 本机安装 Git（自动探测 PATH、常见安装目录与注册表）
 - .NET Framework 4.8.1
 - 可选：GitHub CLI（`gh`），用于「GitHub 面板」。安装：`winget install GitHub.cli`，或到 https://cli.github.com 下载；装好后在面板里点「登录 / 授权」，也可以在命令行执行 `gh auth login`
+- 可选（VisibleCMake）：CMake 与 GNU make（mingw32-make）；只写配置不构建的话不需要
+
+## 与 Editior / guidgen / VisibleCMake 集成
+
+四个项目在同一个解决方案里（`betterGitGUI.slnx`），执行 `dotnet build betterGitGUI.slnx` 可一次全部编译。
+
+- **打开编辑器**：列表右键「用 Editior 打开」、或者「工具 → 用 Editior 打开当前仓库」。
+  BetterGitGUI 也接受仓库路径作为启动参数（`betterGitGUI.exe "D:\repo"`），Editior 的「在 BetterGitGUI 中打开当前仓库」就是这样调用的。
+- **GUID 生成器**：「工具 → GUID 生成器…」优先打开 Editior 内置的生成器（`Editior.exe --guid`），找不到时退回独立的 `guidgen\guid\bin\Debug\guid.exe`。
+- 编译好后，Editior 也可以反向打开 BetterGitGUI（`Git` 菜单）与 GUID 生成器（`工具` 菜单）。
